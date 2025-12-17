@@ -1,9 +1,7 @@
-﻿using System;
+﻿using projedeneme.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using projedeneme.Models;
 
 namespace projedeneme.Services;
@@ -14,49 +12,59 @@ public static class GraphBuilder
     {
         var graph = new Graph();
 
-        // 1) Node oluştur
-        foreach (var r in rows)
+        var nodes = rows.Select(r => new Node
         {
-            var node = new Node
-            {
-                Id = r.DugumId,
-                Aktiflik = r.Aktiflik,
-                Etkilesim = r.Etkilesim,
-                BaglantiSayisi = r.BaglantiSayisi,
-                KomsuIdler = r.Komsular.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                      .Select(s => int.Parse(s.Trim()))
-                                      .ToList()
-            };
-            graph.Nodes.Add(node);
-        }
+            Id = r.DugumId,
+            Aktiflik = r.Aktiflik,
+            Etkilesim = r.Etkilesim,
+            BaglantiSayisi = r.BaglantiSayisi,
+            KomsuIdler = ParseNeighbors(r.Komsular)
+        }).ToList();
 
-        var dict = graph.Nodes.ToDictionary(n => n.Id);
+        graph.Nodes.AddRange(nodes);
 
-        // 2) Edge üret (yönsüz, çift edge yok, self-loop yok)
-        foreach (var node in graph.Nodes)
+        var byId = graph.Nodes.ToDictionary(n => n.Id, n => n);
+
+        var added = new HashSet<(int, int)>();
+
+        foreach (var n in graph.Nodes)
         {
-            foreach (var komsuId in node.KomsuIdler)
+            foreach (var nbId in n.KomsuIdler)
             {
-                if (komsuId == node.Id) continue;            // self-loop engel
-                if (!dict.ContainsKey(komsuId)) continue;     // hatalı komşu id engel
+                if (!byId.TryGetValue(nbId, out var nb)) continue;
 
-                // çift edge engeli: sadece küçük id -> büyük id ekle
-                if (node.Id >= komsuId) continue;
+                int u = n.Id, v = nb.Id;
+                if (u > v) (u, v) = (v, u);
+                if (!added.Add((u, v))) continue;
 
-                var other = dict[komsuId];
-
-                var edge = new Edge
+                graph.Edges.Add(new Edge
                 {
-                    From = node,
-                    To = other,
-                    Weight = WeightCalculator.Calculate(node, other)
-                };
-
-                graph.Edges.Add(edge);
+                    From = byId[u],
+                    To = byId[v],
+                    Weight = 1.0
+                });
             }
         }
 
         return graph;
     }
-}
 
+    private static List<int> ParseNeighbors(string komsular)
+    {
+        if (string.IsNullOrWhiteSpace(komsular)) return new();
+
+        var parts = komsular
+            .Trim().Trim('"')
+            .Replace("[", "").Replace("]", "")
+            .Replace(";", ",")
+            .Replace(" ", ",")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        var list = new List<int>();
+        foreach (var p in parts)
+            if (int.TryParse(p.Trim(), out int id))
+                list.Add(id);
+
+        return list;
+    }
+}

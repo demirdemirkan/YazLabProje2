@@ -1,27 +1,94 @@
 ﻿<Window x:Class="projedeneme.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:projedeneme"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <StackPanel Orientation="Horizontal" Margin="10"
-            HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Button Content="1) Small CSV Yükle" Width="180" Height="40" Margin="0,0,10,0"
-            Click="OnLoadSmallClick"/>
-            <Button Content="2) Medium CSV Yükle" Width="180" Height="40"
-            Click="OnLoadMediumClick"/>
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Margin="10,60,10,10"
-            HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Button Content="BFS (Start=1)" Width="140" Height="40" Margin="0,0,10,0"
-            Click="OnBfsClick"/>
-            <Button Content="DFS (Start=1)" Width="140" Height="40"
-            Click="OnDfsClick"/>
-        </StackPanel>
+        Title="Graph Visualizer" Height="720" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        Background="#111111">
 
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="180"/>
+        </Grid.RowDefinitions>
 
+        <!-- TOP BAR -->
+        <Border Grid.Row="0" CornerRadius="10" Padding="10" Background="#1A1A1A" Margin="0,0,0,10">
+            <DockPanel LastChildFill="False">
+                <!-- Left: CSV -->
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <TextBlock Text="CSV:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="CsvCombo" Width="170" SelectedIndex="0">
+                        <ComboBoxItem Content="small.csv"/>
+                        <ComboBoxItem Content="medium.csv"/>
+                        <ComboBoxItem Content="large.csv"/>
+                    </ComboBox>
+                    <Button x:Name="BtnLoad" Content="Yükle" Width="90" Margin="10,0,0,0" Click="BtnLoad_Click"/>
+                </StackPanel>
+
+                <!-- Right: Algo -->
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <TextBlock Text="Algoritma:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="AlgoCombo" Width="170" SelectedIndex="0">
+                        <ComboBoxItem Content="Dijkstra"/>
+                        <ComboBoxItem Content="A*"/>
+                        <ComboBoxItem Content="BFS"/>
+                        <ComboBoxItem Content="DFS"/>
+                    </ComboBox>
+                    <Button x:Name="BtnRun" Content="Çalıştır" Width="110" Margin="10,0,0,0" Click="BtnRun_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- MIDDLE -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="320"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Canvas area -->
+            <Border Grid.Column="0" CornerRadius="10" Padding="10" Background="#1A1A1A">
+                <Grid>
+                    <Canvas x:Name="GraphCanvas" Background="#0F0F0F"/>
+                    <TextBlock Text="Canvas: Grafik burada çizilecek"
+                               Foreground="#777" Margin="8"
+                               IsHitTestVisible="False"/>
+                </Grid>
+            </Border>
+
+            <!-- Right panel -->
+            <Border Grid.Column="1" CornerRadius="10" Padding="12" Background="#1A1A1A" Margin="10,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="Kontroller" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Başlangıç Node ID" Foreground="White"/>
+                    <TextBox x:Name="TxtStart" Margin="0,6,0,10"/>
+
+                    <TextBlock Text="Hedef Node ID" Foreground="White"/>
+                    <TextBox x:Name="TxtEnd" Margin="0,6,0,10"/>
+
+                    <CheckBox x:Name="ChkShowIds" Content="Node ID göster" Foreground="White" IsChecked="True" Margin="0,0,0,6"/>
+                    <CheckBox x:Name="ChkShowWeights" Content="Ağırlıkları göster" Foreground="White" IsChecked="True" Margin="0,0,0,12"/>
+
+                    <Button x:Name="BtnClear" Content="Temizle" Height="34" Click="BtnClear_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- LOG -->
+        <Border Grid.Row="2" CornerRadius="10" Padding="10" Background="#1A1A1A" Margin="0,10,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Log / Çıktı" Foreground="White" FontWeight="Bold"/>
+                <TextBox x:Name="TxtLog" Grid.Row="1" Margin="0,8,0,0"
+                         VerticalScrollBarVisibility="Auto"
+                         TextWrapping="Wrap"
+                         IsReadOnly="True"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
