@@ -19,6 +19,9 @@ namespace projedeneme
         private readonly Dictionary<int, Ellipse> nodeEllipses = new Dictionary<int, Ellipse>();
         private readonly Dictionary<(int a, int b), Line> edgeLines = new Dictionary<(int a, int b), Line>();
 
+        // ✅ A* heuristic için canvas pozisyonlarını saklayacağız
+        private readonly Dictionary<int, (double x, double y)> nodePositions = new Dictionary<int, (double x, double y)>();
+
         private int? selectedStartId = null;
         private int? selectedEndId = null;
 
@@ -29,11 +32,9 @@ namespace projedeneme
             InitializeComponent();
             Log("UI hazır. CSV seçip 'Yükle'ye bas.");
 
-            // Start/End elle yazılmasın (UI seçimi node tıklama ile)
             if (TxtStart != null) TxtStart.IsReadOnly = true;
             if (TxtEnd != null) TxtEnd.IsReadOnly = true;
 
-            // Algo değişince start/end aktifliklerini ayarla
             if (AlgoCombo != null)
                 AlgoCombo.SelectionChanged += AlgoCombo_SelectionChanged;
 
@@ -54,8 +55,8 @@ namespace projedeneme
                 var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", csvFile);
                 Log($"[UI] CSV path: {path}");
 
-                var rows = CsvNodeLoader.Load(path);          // List<NodeRow>
-                _graph = GraphBuilder.BuildFromRows(rows);    // Services/GraphBuilder.cs
+                var rows = CsvNodeLoader.Load(path);
+                _graph = GraphBuilder.BuildFromRows(rows);
 
                 DrawGraphFromGraph(_graph);
                 Log($"[OK] Yüklendi. Node={_graph.Nodes.Count}, Edge={_graph.Edges.Count}");
@@ -79,7 +80,6 @@ namespace projedeneme
 
             try
             {
-                // Algoya göre input ihtiyacı
                 bool needsStart = AlgoNeedsStart(algo);
                 bool needsEnd = AlgoNeedsEnd(algo);
 
@@ -104,7 +104,7 @@ namespace projedeneme
                     }
                 }
 
-                // Mevcut bağlı olanlar
+                // BFS
                 if (algo == "BFS")
                 {
                     var order = Bfs.Run(_graph, startId);
@@ -113,6 +113,7 @@ namespace projedeneme
                     return;
                 }
 
+                // DFS
                 if (algo == "DFS")
                 {
                     var order = Dfs.Run(_graph, startId);
@@ -121,18 +122,51 @@ namespace projedeneme
                     return;
                 }
 
-                // Diğerleri: sen bağlayacaksın (UI inputları hazır)
-                if (algo == "Dijkstra" || algo == "A*")
+                // Dijkstra (sende zaten çalışıyor)
+                if (algo == "Dijkstra")
                 {
-                    Log("[BİLGİ] Bu algoritma seçildi. Start/End hazır. (Kodu sen bağlayacaksın)");
-                    // Buraya kendi Dijkstra/A* çağrını ekleyeceksin.
+                    var (path, cost) = Dijkstra.Run(_graph, startId, endId);
+
+                    Log($"[OK] Dijkstra path: {string.Join("->", path)}");
+                    Log($"[OK] Toplam maliyet: {cost:0.####}");
+
+                    HighlightPath(path.ToArray());
                     return;
                 }
 
+                // ✅ A* (FIX: nodePositions var + TryGetValue yazım düzeltildi)
+                if (algo == "A*")
+                {
+                    double Heuristic(int a, int b)
+                    {
+                        if (nodePositions.TryGetValue(a, out var pa) &&
+                            nodePositions.TryGetValue(b, out var pb))
+                        {
+                            double dx = pa.x - pb.x;
+                            double dy = pa.y - pb.y;
+                            return Math.Sqrt(dx * dx + dy * dy);
+                        }
+                        return 0.0; // pozisyon yoksa Dijkstra gibi
+                    }
+
+                    var path = AStar.FindPath(_graph, startId, endId, Heuristic);
+
+                    if (path == null || path.Count == 0)
+                    {
+                        Log("[HATA] A*: Yol bulunamadı.");
+                        HighlightPath(Array.Empty<int>());
+                        return;
+                    }
+
+                    Log($"[OK] A* path: {string.Join("->", path)}");
+                    HighlightPath(path.ToArray());
+                    return;
+                }
+
+                // Diğerleri (sonra bağlayacağız)
                 if (algo == "Bağlı Bileşenler" || algo == "Degree Centrality" || algo == "Welsh-Powell")
                 {
-                    Log("[BİLGİ] Bu algoritma seçildi. Start/End gerekmiyor. (Kodu sen bağlayacaksın)");
-                    // Buraya kendi algoritma çağrılarını ekleyeceksin.
+                    Log("[BİLGİ] Bu algoritma seçildi. Start/End gerekmiyor. (Kodu sonra bağlayacağız)");
                     return;
                 }
 
@@ -146,7 +180,6 @@ namespace projedeneme
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
-            // Grafik yüklü değilse sadece alanları temizle
             selectedStartId = null;
             selectedEndId = null;
             nextClickIsStart = true;
@@ -154,23 +187,18 @@ namespace projedeneme
             if (TxtStart != null) TxtStart.Text = "";
             if (TxtEnd != null) TxtEnd.Text = "";
 
-            // Edge highlight'larını geri al (grafik yüklüyse)
             foreach (var kvp in edgeLines)
             {
                 kvp.Value.Stroke = Brushes.DimGray;
                 kvp.Value.StrokeThickness = 2;
             }
 
-            // Node renklerini geri al (grafik yüklüyse)
             UpdateNodeColors();
-
             Log("[UI] Seçimler temizlendi (grafik/CSV korunuyor).");
         }
 
+        // --- Algo UI state ---
 
-        // --- Algo UI state (Start/End enable/disable) ---
-
-        // XAML istersen: AlgoCombo SelectionChanged="AlgoCombo_SelectionChanged"
         private void AlgoCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplyAlgoUiState();
@@ -186,7 +214,6 @@ namespace projedeneme
             if (TxtStart != null) TxtStart.IsEnabled = startEnabled;
             if (TxtEnd != null) TxtEnd.IsEnabled = endEnabled;
 
-            // Start/End gerekmiyorsa temizle + seçimi de temizle ki renkler düzgün kalsın
             if (!startEnabled)
             {
                 selectedStartId = null;
@@ -199,67 +226,50 @@ namespace projedeneme
                 if (TxtEnd != null) TxtEnd.Text = "";
             }
 
-            // Tıklama sırasını da mantıklı ayarla:
-            // Start aktifse ilk tık start'tan başlasın. Start pasifse zaten node tıklamak anlamsız.
             nextClickIsStart = startEnabled;
-
             UpdateNodeColors();
         }
 
         private bool AlgoNeedsStart(string algo)
         {
-            // BFS/DFS: sadece start
             if (algo == "BFS" || algo == "DFS") return true;
-
-            // Dijkstra/A*: start + end
             if (algo == "Dijkstra" || algo == "A*") return true;
 
-            // Bağlı bileşenler / degree / welsh-powell: input yok
             if (algo == "Bağlı Bileşenler" || algo == "Degree Centrality" || algo == "Welsh-Powell") return false;
-
-            // Varsayılan: start gereksin
             return true;
         }
 
         private bool AlgoNeedsEnd(string algo)
         {
-            // Dijkstra/A* end ister
             if (algo == "Dijkstra" || algo == "A*") return true;
-
-            // BFS/DFS end istemez
             if (algo == "BFS" || algo == "DFS") return false;
 
-            // Bağlı bileşenler / degree / welsh-powell: end yok
             if (algo == "Bağlı Bileşenler" || algo == "Degree Centrality" || algo == "Welsh-Powell") return false;
-
-            // Varsayılan: end istemesin
             return false;
         }
 
-        // --- UI Geliştirmeleri: Canvas resize / loaded / checkbox change ---
+        // --- Canvas events ---
 
-        // XAML: GraphCanvas Loaded="GraphCanvas_Loaded"
         private void GraphCanvas_Loaded(object sender, RoutedEventArgs e)
         {
             if (_graph != null)
                 DrawGraphFromGraph(_graph);
         }
 
-        // XAML: GraphCanvas SizeChanged="GraphCanvas_SizeChanged"
         private void GraphCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (_graph != null)
                 DrawGraphFromGraph(_graph);
         }
 
-        // XAML: CheckBox Checked/Unchecked="UiOptionChanged"
         private void UiOptionChanged(object sender, RoutedEventArgs e)
         {
             if (_graph != null)
                 DrawGraphFromGraph(_graph);
         }
 
-        // CSV'de X/Y yok => çember yerleşimi
+        // --- Draw Graph ---
+
         private void DrawGraphFromGraph(Graph graph)
         {
             GraphCanvas.Children.Clear();
@@ -267,13 +277,14 @@ namespace projedeneme
             nodeEllipses.Clear();
             edgeLines.Clear();
 
+            // ✅ positions reset
+            nodePositions.Clear();
+
             selectedStartId = null;
             selectedEndId = null;
 
-            // Seçili algo'ya göre başlangıç tıklama mantığını yeniden kur
             ApplyAlgoUiState();
 
-            // Daha sağlam ölçü okuma (ActualWidth/Height bazen 0 geliyor)
             double W = GraphCanvas.ActualWidth;
             double H = GraphCanvas.ActualHeight;
 
@@ -291,20 +302,18 @@ namespace projedeneme
             int nCount = nodes.Count;
             if (nCount == 0) return;
 
-            var pos = new Dictionary<int, (double x, double y)>();
+            // ✅ nodePositions doldur
             for (int i = 0; i < nCount; i++)
             {
                 double angle = 2 * Math.PI * i / nCount;
-                pos[nodes[i].Id] = (cx + radius * Math.Cos(angle), cy + radius * Math.Sin(angle));
+                nodePositions[nodes[i].Id] = (cx + radius * Math.Cos(angle), cy + radius * Math.Sin(angle));
             }
 
             // Edge çiz
             foreach (var e in graph.Edges)
             {
-                (double x, double y) p1;
-                (double x, double y) p2;
-                if (!pos.TryGetValue(e.From.Id, out p1)) continue;
-                if (!pos.TryGetValue(e.To.Id, out p2)) continue;
+                if (!nodePositions.TryGetValue(e.From.Id, out var p1)) continue;
+                if (!nodePositions.TryGetValue(e.To.Id, out var p2)) continue;
 
                 var line = new Line
                 {
@@ -340,7 +349,7 @@ namespace projedeneme
             // Node çiz
             foreach (var n in nodes)
             {
-                var p = pos[n.Id];
+                var p = nodePositions[n.Id];
                 DrawNode(n.Id, p.x, p.y);
             }
 
@@ -390,29 +399,25 @@ namespace projedeneme
             var el = sender as Ellipse;
             if (el == null) return;
 
-            int id;
-            if (el.Tag == null || !int.TryParse(el.Tag.ToString(), out id)) return;
+            if (el.Tag == null || !int.TryParse(el.Tag.ToString(), out int id)) return;
 
             var algo = (AlgoCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "";
             bool startEnabled = AlgoNeedsStart(algo);
             bool endEnabled = AlgoNeedsEnd(algo);
 
-            // Start/End tamamen pasifse node tıklamayı görmezden gel
             if (!startEnabled && !endEnabled)
                 return;
 
-            // BFS/DFS: sadece start
             if (startEnabled && !endEnabled)
             {
                 selectedStartId = id;
                 TxtStart.Text = id.ToString();
                 Log($"[UI] Start seçildi: {id}");
-                nextClickIsStart = true; // hep start seçsin
+                nextClickIsStart = true;
                 UpdateNodeColors();
                 return;
             }
 
-            // Dijkstra/A*: start ve end var -> sıralı seçim
             if (nextClickIsStart)
             {
                 selectedStartId = id;
@@ -461,8 +466,7 @@ namespace projedeneme
                 int u = a, v = b;
                 if (u > v) { int tmp = u; u = v; v = tmp; }
 
-                Line line;
-                if (edgeLines.TryGetValue((u, v), out line))
+                if (edgeLines.TryGetValue((u, v), out Line line))
                 {
                     line.Stroke = Brushes.DeepSkyBlue;
                     line.StrokeThickness = 5;
