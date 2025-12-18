@@ -21,7 +21,6 @@
                     <ComboBox x:Name="CsvCombo" Width="170" SelectedIndex="0">
                         <ComboBoxItem Content="small.csv"/>
                         <ComboBoxItem Content="medium.csv"/>
-                        <ComboBoxItem Content="large.csv"/>
                     </ComboBox>
                     <Button x:Name="BtnLoad" Content="Yükle" Width="90" Margin="10,0,0,0" Click="BtnLoad_Click"/>
                 </StackPanel>
@@ -34,7 +33,12 @@
                         <ComboBoxItem Content="A*"/>
                         <ComboBoxItem Content="BFS"/>
                         <ComboBoxItem Content="DFS"/>
+                        <ComboBoxItem Content="Bağlı Bileşenler"/>
+                        <ComboBoxItem Content="Degree Centrality"/>
+                        <ComboBoxItem Content="Welsh-Powell"/>
+
                     </ComboBox>
+                   
                     <Button x:Name="BtnRun" Content="Çalıştır" Width="110" Margin="10,0,0,0" Click="BtnRun_Click"/>
                 </StackPanel>
             </DockPanel>

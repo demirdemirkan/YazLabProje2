@@ -28,6 +28,11 @@ namespace projedeneme
         {
             InitializeComponent();
             Log("UI hazır. CSV seçip 'Yükle'ye bas.");
+
+            // (Bozmaz) Start/End elle yazılmasın istiyorsan XAML'de IsReadOnly=True yap.
+            // Burada da güvence:
+            if (TxtStart != null) TxtStart.IsReadOnly = true;
+            if (TxtEnd != null) TxtEnd.IsReadOnly = true;
         }
 
         private void BtnLoad_Click(object sender, RoutedEventArgs e)
@@ -41,7 +46,6 @@ namespace projedeneme
 
             try
             {
-                // Path çakışması olmasın diye full name
                 var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", csvFile);
                 Log($"[UI] CSV path: {path}");
 
@@ -77,19 +81,52 @@ namespace projedeneme
 
             try
             {
-                // BFS/DFS start ile çalışıyor (end yok)
-                List<int> order;
+                // Algoritmaları sen ekleyeceksin.
+                // Burada sadece seçimlere göre iskelet var; bilinmeyen seçimlerde hata fırlatmak yerine log + return yaptım.
+
                 if (algo == "BFS")
-                    order = Bfs.Run(_graph, startId);
-                else if (algo == "DFS")
-                    order = Dfs.Run(_graph, startId);
-                else
-                    throw new Exception("Şimdilik sadece BFS/DFS bağlı.");
+                {
+                    var order = Bfs.Run(_graph, startId);
+                    Log($"[OK] BFS order: {string.Join("->", order)}");
+                    HighlightPath(order.ToArray());
+                    return;
+                }
 
-                Log($"[OK] {algo} order: {string.Join("->", order)}");
+                if (algo == "DFS")
+                {
+                    var order = Dfs.Run(_graph, startId);
+                    Log($"[OK] DFS order: {string.Join("->", order)}");
+                    HighlightPath(order.ToArray());
+                    return;
+                }
 
-                // Traversal sırasını highlight etmeyi dener
-                HighlightPath(order.ToArray());
+                // Yeni eklemek istediğin 3 algoritma (sen kodunu ekleyeceksin)
+                if (algo == "Bağlı Bileşenler")
+                {
+                    Log("[BİLGİ] Bağlı Bileşenler seçildi. (Kodunu sen ekleyeceksin)");
+                    return;
+                }
+
+                if (algo == "Degree Centrality")
+                {
+                    Log("[BİLGİ] Degree Centrality seçildi. (Kodunu sen ekleyeceksin)");
+                    return;
+                }
+
+                if (algo == "Welsh-Powell")
+                {
+                    Log("[BİLGİ] Welsh-Powell seçildi. (Kodunu sen ekleyeceksin)");
+                    return;
+                }
+
+                // Mevcut XAML'inde olan ama henüz bağlanmamış görünenler:
+                if (algo == "Dijkstra" || algo == "A*")
+                {
+                    Log("[BİLGİ] Bu algoritma UI'da var ama henüz kodu bağlanmadı. (Sen ekleyeceksin)");
+                    return;
+                }
+
+                Log("[HATA] Seçilen algoritma tanınmadı.");
             }
             catch (Exception ex)
             {
@@ -113,6 +150,31 @@ namespace projedeneme
             Log("[UI] Canvas temizlendi.");
         }
 
+        // --- UI Geliştirmeleri: Canvas resize / loaded / checkbox change ---
+
+        // XAML: GraphCanvas Loaded="GraphCanvas_Loaded"
+        private void GraphCanvas_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Canvas ilk açılışta ölçüler 0 gelebiliyor; loaded sonrası bir redraw düzgün oturtur.
+            if (_graph != null)
+                DrawGraphFromGraph(_graph);
+        }
+
+        // XAML: GraphCanvas SizeChanged="GraphCanvas_SizeChanged"
+        private void GraphCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Resize sırasında sürekli redraw ağır olabilir; ama proje küçük/orta graf için OK.
+            if (_graph != null)
+                DrawGraphFromGraph(_graph);
+        }
+
+        // XAML: CheckBox Checked/Unchecked="UiOptionChanged"
+        private void UiOptionChanged(object sender, RoutedEventArgs e)
+        {
+            if (_graph != null)
+                DrawGraphFromGraph(_graph);
+        }
+
         // CSV'de X/Y yok => çember yerleşimi
         private void DrawGraphFromGraph(Graph graph)
         {
@@ -125,8 +187,16 @@ namespace projedeneme
             selectedEndId = null;
             nextClickIsStart = true;
 
-            double W = GraphCanvas.ActualWidth > 10 ? GraphCanvas.ActualWidth : 800;
-            double H = GraphCanvas.ActualHeight > 10 ? GraphCanvas.ActualHeight : 450;
+            // Daha sağlam ölçü okuma (ActualWidth/Height bazen 0 geliyor)
+            double W = GraphCanvas.ActualWidth;
+            double H = GraphCanvas.ActualHeight;
+
+            if (W < 50 || H < 50)
+            {
+                // ScrollViewer veya ilk render durumlarında
+                W = GraphCanvas.MinWidth > 0 ? GraphCanvas.MinWidth : 800;
+                H = GraphCanvas.MinHeight > 0 ? GraphCanvas.MinHeight : 450;
+            }
 
             double cx = W / 2.0;
             double cy = H / 2.0;
@@ -134,6 +204,7 @@ namespace projedeneme
 
             var nodes = graph.Nodes.OrderBy(n => n.Id).ToList();
             int nCount = nodes.Count;
+            if (nCount == 0) return;
 
             var pos = new Dictionary<int, (double x, double y)>();
             for (int i = 0; i < nCount; i++)
@@ -166,7 +237,6 @@ namespace projedeneme
                 if (u > v) { int tmp = u; u = v; v = tmp; }
                 edgeLines[(u, v)] = line;
 
-                // Weight checkbox XAML'de yoksa derleme hatası olur; varsa çalışır
                 if (ChkShowWeights != null && ChkShowWeights.IsChecked == true)
                 {
                     var t = new TextBlock
@@ -215,7 +285,7 @@ namespace projedeneme
 
             nodeEllipses[id] = ellipse;
 
-            if (ChkShowIds.IsChecked == true)
+            if (ChkShowIds != null && ChkShowIds.IsChecked == true)
             {
                 var text = new TextBlock
                 {
