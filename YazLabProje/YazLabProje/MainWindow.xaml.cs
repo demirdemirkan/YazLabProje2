@@ -30,8 +30,19 @@ namespace projedeneme
         private int? selectedEndId = null;
 
         private Graph _graph = null;
+        
+        private string _loadedCsvPath = null;
+        private List<NodeRow> _loadedRows = null;
 
         private bool _uiReady = false;
+        // ✅ Zoom/Pan
+        private double _zoom = 1.0;
+        private const double ZoomMin = 0.35;
+        private const double ZoomMax = 3.0;
+
+        private bool _isPanning = false;
+        private Point _panStart;
+        private double _startHOffset, _startVOffset;
 
         public MainWindow()
         {
@@ -62,8 +73,26 @@ namespace projedeneme
             try
             {
                 var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Data", csvFile);
-                var rows = CsvNodeLoader.Load(path);
-                _graph = GraphBuilder.BuildFromRows(rows);
+
+             
+                _loadedCsvPath = path;
+
+               
+                _loadedRows = CsvNodeLoader.Load(path);
+
+                
+                _graph = GraphBuilder.BuildFromRows(_loadedRows);
+
+                var weightPath = System.IO.Path.ChangeExtension(_loadedCsvPath, null) + "_edges.csv";
+                var wmap = CsvEdgeWeightStore.LoadAsMap(weightPath);
+
+                foreach (var ed in _graph.Edges)
+                {
+                    int u = Math.Min(ed.From.Id, ed.To.Id);
+                    int v = Math.Max(ed.From.Id, ed.To.Id);
+                    if (wmap.TryGetValue((u, v), out var w))
+                        ed.Weight = w;
+                }
 
                 nodeColoring = null;
                 DrawGraphFromGraph(_graph);
@@ -342,27 +371,31 @@ namespace projedeneme
             selectedEndId = null;
             TxtStart.Text = "";
             TxtEnd.Text = "";
+            
+            int nCount = graph.Nodes.Count;
 
-            double W = GraphCanvas.ActualWidth;
-            double H = GraphCanvas.ActualHeight;
+            // ✅ medium gibi büyük graflar için dev canvas
+            double canvasSize = 900;
+            if (nCount >= 40) canvasSize = 1400;
+            if (nCount >= 70) canvasSize = 2200;
 
-            if (W < 50 || H < 50)
-            {
-                W = GraphCanvas.MinWidth > 0 ? GraphCanvas.MinWidth : 900;
-                H = GraphCanvas.MinHeight > 0 ? GraphCanvas.MinHeight : 600;
-            }
+            GraphCanvas.Width = canvasSize;
+            GraphCanvas.Height = canvasSize;
+
+            double W = GraphCanvas.Width;
+            double H = GraphCanvas.Height;
+
 
             double cx = W / 2.0;
             double cy = H / 2.0;
 
             var nodes = graph.Nodes.OrderBy(n => n.Id).ToList();
-            int nCount = nodes.Count;
+            
             if (nCount == 0) return;
 
-            double baseRadius = Math.Min(W, H) * 0.38;
-            double radius = baseRadius;
-            if (nCount >= 40) radius = baseRadius * 0.85;
-            if (nCount >= 70) radius = baseRadius * 0.75;
+            double baseRadius = Math.Min(W, H) * 0.45;
+            double radius = baseRadius; // artık medium’da zaten büyük W/H var
+
 
             for (int i = 0; i < nCount; i++)
             {
@@ -683,6 +716,12 @@ namespace projedeneme
         // Helpers
         // -------------------------
         private bool NodeExists(int id) => _graph != null && _graph.Nodes.Any(n => n.Id == id);
+        private string GetEdgeWeightPath(string baseCsvPath)
+        {
+            var dir = System.IO.Path.GetDirectoryName(baseCsvPath);
+            var name = System.IO.Path.GetFileNameWithoutExtension(baseCsvPath);
+            return System.IO.Path.Combine(dir, name + "_edges.csv");
+        }
 
         private bool TryGetNode(int id, out Node node)
         {
@@ -761,6 +800,7 @@ namespace projedeneme
             _graph.Nodes.Add(new Node { Id = id });
 
             RefreshGraphViewAfterEdit();
+            PersistCurrentGraphToCsv();
             Log($"Node eklendi: {id}");
 
             TxtEditNodeId.Text = "";
@@ -787,6 +827,8 @@ namespace projedeneme
             _graph.Nodes.Remove(node);
 
             RefreshGraphViewAfterEdit();
+            PersistCurrentGraphToCsv();
+
             ClearNodeDetails();
             Log($"Node silindi: {id}");
 
@@ -835,6 +877,7 @@ namespace projedeneme
             _graph.Edges.Add(new Edge { From = fromNode, To = toNode, Weight = w });
 
             RefreshGraphViewAfterEdit();
+            PersistCurrentGraphToCsv();
             Log($"Edge eklendi: {fromId} - {toId} (w={w:0.##})");
 
             TxtEdgeFrom.Text = "";
@@ -869,6 +912,8 @@ namespace projedeneme
             _graph.Edges.Remove(edge);
 
             RefreshGraphViewAfterEdit();
+            PersistCurrentGraphToCsv();
+
             Log($"Edge silindi: {fromId} - {toId}");
 
             TxtEdgeFrom.Text = "";
@@ -922,6 +967,8 @@ namespace projedeneme
             nodeColoring = null;
 
             RefreshGraphViewAfterEdit();
+            PersistCurrentGraphToCsv();
+
             Log($"Node güncellendi: {oldId} -> {newId}");
 
             TxtUpdateOldNodeId.Text = "";
@@ -966,11 +1013,134 @@ namespace projedeneme
 
             // Renklendirme yoksa zaten normal, varsa da bozmaya gerek yok
             RefreshGraphViewAfterEdit();
+            PersistCurrentGraphToCsv();
+
             Log($"Edge güncellendi: {fromId} - {toId} (w={w:0.##})");
 
             TxtUpdateEdgeFrom.Text = "";
             TxtUpdateEdgeTo.Text = "";
             TxtUpdateEdgeWeight.Text = "1";
+        }
+        // =========================
+        // CSV'YE GERİ YAZ (KALICI)
+        // =========================
+        private void PersistCurrentGraphToCsv()
+        {
+            if (_graph == null || string.IsNullOrWhiteSpace(_loadedCsvPath))
+                return;
+
+            var nodes = _graph.Nodes.OrderBy(n => n.Id).ToList();
+            var neigh = nodes.ToDictionary(n => n.Id, _ => new HashSet<int>());
+
+            foreach (var e in _graph.Edges)
+            {
+                int a = e.From.Id;
+                int b = e.To.Id;
+                if (a == b) continue;
+                neigh[a].Add(b);
+                neigh[b].Add(a);
+            }
+
+            var oldRows = (_loadedRows ?? new List<NodeRow>())
+                .ToDictionary(r => r.DugumId, r => r);
+
+            var newRows = new List<NodeRow>();
+
+            foreach (var n in nodes)
+            {
+                oldRows.TryGetValue(n.Id, out var old);
+
+                newRows.Add(new NodeRow
+                {
+                    DugumId = n.Id,
+                    Aktiflik = old?.Aktiflik ?? n.Aktiflik,
+                    Etkilesim = old?.Etkilesim ?? n.Etkilesim,
+                    BaglantiSayisi = neigh[n.Id].Count,
+                    Komsular = string.Join(",", neigh[n.Id].OrderBy(x => x))
+                });
+            }
+
+            CsvNodeLoader.Save(_loadedCsvPath, newRows);
+            var weightPath = GetEdgeWeightPath(_loadedCsvPath);
+            CsvEdgeWeightStore.Save(weightPath, _graph.Edges);
+
+            _loadedRows = newRows;
+
+            Log("Kaydedildi: " + _loadedCsvPath);
+        }
+        // =========================
+        // ✅ Zoom + Pan Handlers
+        // =========================
+        private void GraphScroll_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (ZoomScale == null) return;
+
+            double oldZoom = _zoom;
+            _zoom *= (e.Delta > 0) ? 1.10 : 1.0 / 1.10;
+            _zoom = Math.Max(ZoomMin, Math.Min(ZoomMax, _zoom));
+
+            if (Math.Abs(_zoom - oldZoom) < 0.0001) return;
+
+            ZoomScale.ScaleX = _zoom;
+            ZoomScale.ScaleY = _zoom;
+
+            e.Handled = true;
+        }
+
+        private void GraphScroll_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (GraphScroll == null) return;
+
+            // ✅ Eğer node’a tıkladıysan pan yok
+            if (e.OriginalSource is DependencyObject dep)
+            {
+                // Ellipse veya onun altındaki şey mi?
+                var hitEllipse = FindVisualParent<Ellipse>(dep);
+                if (hitEllipse != null)
+                    return; // node click çalışsın
+            }
+
+            // ✅ Boş alana tıklandıysa pan başlat
+            _isPanning = true;
+            _panStart = e.GetPosition(GraphScroll);
+            _startHOffset = GraphScroll.HorizontalOffset;
+            _startVOffset = GraphScroll.VerticalOffset;
+
+            GraphScroll.CaptureMouse();
+            e.Handled = true;
+        }
+
+
+        private void GraphScroll_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (GraphScroll == null) return;
+
+            _isPanning = false;
+            GraphScroll.ReleaseMouseCapture();
+            e.Handled = true;
+        }
+
+        private void GraphScroll_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (!_isPanning || GraphScroll == null) return;
+
+            var cur = e.GetPosition(GraphScroll);
+            var dx = cur.X - _panStart.X;
+            var dy = cur.Y - _panStart.Y;
+
+            GraphScroll.ScrollToHorizontalOffset(_startHOffset - dx);
+            GraphScroll.ScrollToVerticalOffset(_startVOffset - dy);
+
+            e.Handled = true;
+        }
+        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T t) return t;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
 
         private void Log(string msg)

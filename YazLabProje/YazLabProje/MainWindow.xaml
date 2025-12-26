@@ -56,12 +56,29 @@
             <!-- Canvas area -->
             <Border Grid.Column="0" CornerRadius="10" Padding="10" Background="#1A1A1A">
                 <Grid>
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+
+                    <!-- ✅ Zoom + Pan -->
+                    <ScrollViewer x:Name="GraphScroll"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  PreviewMouseWheel="GraphScroll_PreviewMouseWheel"
+                                  PreviewMouseLeftButtonDown="GraphScroll_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="GraphScroll_PreviewMouseLeftButtonUp"
+                                  PreviewMouseMove="GraphScroll_PreviewMouseMove">
+
                         <Canvas x:Name="GraphCanvas"
                                 Background="#0F0F0F"
                                 MinWidth="900" MinHeight="600"
                                 Loaded="GraphCanvas_Loaded"
-                                SizeChanged="GraphCanvas_SizeChanged"/>
+                                SizeChanged="GraphCanvas_SizeChanged">
+
+                            <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="ZoomScale" ScaleX="1" ScaleY="1"/>
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
+
+                        </Canvas>
                     </ScrollViewer>
 
                     <TextBlock Text="Canvas: Grafik burada çizilecek"
