@@ -3,8 +3,308 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Graph Visualizer" Height="720" Width="1200"
         WindowStartupLocation="CenterScreen"
-        Background="#111111"
+        Background="#0F1115"
+        FontFamily="Segoe UI"
+        FontSize="12"
         Loaded="Window_Loaded">
+
+    <Window.Resources>
+
+        <!-- =========================
+             RENKLER + BRUSH'LAR
+             ========================= -->
+        <Color x:Key="Bg0">#0F1115</Color>
+        <Color x:Key="Bg1">#151922</Color>
+        <Color x:Key="Card">#1B2230</Color>
+        <Color x:Key="Stroke">#2A3447</Color>
+        <Color x:Key="Text0">#E8ECF2</Color>
+        <Color x:Key="Text1">#AEB7C6</Color>
+        <Color x:Key="Accent">#4EA1FF</Color>
+
+        <SolidColorBrush x:Key="Bg0B" Color="{StaticResource Bg0}" />
+        <SolidColorBrush x:Key="Bg1B" Color="{StaticResource Bg1}" />
+        <SolidColorBrush x:Key="CardB" Color="{StaticResource Card}" />
+        <SolidColorBrush x:Key="StrokeB" Color="{StaticResource Stroke}" />
+        <SolidColorBrush x:Key="Text0B" Color="{StaticResource Text0}" />
+        <SolidColorBrush x:Key="Text1B" Color="{StaticResource Text1}" />
+        <SolidColorBrush x:Key="AccentB" Color="{StaticResource Accent}" />
+
+        <!-- Genel TextBlock rengi -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Text0B}"/>
+        </Style>
+
+        <!-- Kart -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardB}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeB}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <!-- Bölüm başlığı -->
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Foreground" Value="{StaticResource Text0B}"/>
+        </Style>
+
+        <!-- İnce açıklama -->
+        <Style x:Key="MutedText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Text1B}"/>
+        </Style>
+
+        <!-- Button -->
+        <Style TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="Background" Value="#2A3548"/>
+            <Setter Property="Foreground" Value="{StaticResource Text0B}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeB}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#34435C"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#243044"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary buton -->
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource AccentB}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource AccentB}"/>
+            <Setter Property="Foreground" Value="#0B0F16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- TextBox -->
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Background" Value="#101521"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeB}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{StaticResource Text0B}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource Text0B}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="0"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBoxItem -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="#E8ECF2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Style.Triggers>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter Property="Background" Value="#243044"/>
+                    <Setter Property="Foreground" Value="#E8ECF2"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#2A3548"/>
+                    <Setter Property="Foreground" Value="#E8ECF2"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ComboBox (Dark) -->
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="10,2"/>
+            <Setter Property="Background" Value="#101521"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeB}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{StaticResource Text0B}"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+
+                            <!-- Closed state (tıklanan alan) -->
+                            <ToggleButton x:Name="ToggleButton"
+                                          Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          Padding="8,0"
+                                          Focusable="False"
+                                          FocusVisualStyle="{x:Null}"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Bd"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="10"
+                                                SnapsToDevicePixels="True">
+                                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                              HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- ✅ Hover efekti burada (kapalıyken de görünür) -->
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#182030"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#0E1320"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="Bd" Property="Opacity" Value="0.55"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+
+                                <!-- İçerik -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="24"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <ContentPresenter Margin="2,0,0,0"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Left"
+                                                      Content="{TemplateBinding SelectionBoxItem}"
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}">
+                                        <ContentPresenter.Resources>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#E8ECF2"/>
+                                            </Style>
+                                        </ContentPresenter.Resources>
+                                    </ContentPresenter>
+
+                                    <TextBlock Grid.Column="1"
+                                               Text="▾"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"
+                                               Foreground="#E8ECF2"
+                                               Opacity="0.9"/>
+                                </Grid>
+                            </ToggleButton>
+
+                            <!-- DropDown -->
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Border Background="#0E1320"
+                                        BorderBrush="{StaticResource StrokeB}"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        Padding="4">
+                                    <ScrollViewer Margin="0" SnapsToDevicePixels="True">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ToggleButton" Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- CheckBox -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,6,0,6"/>
+            <Setter Property="Foreground" Value="{StaticResource Text0B}"/>
+        </Style>
+
+        <!-- Separator -->
+        <Style TargetType="Separator">
+            <Setter Property="Margin" Value="0,12,0,12"/>
+            <Setter Property="Background" Value="{StaticResource StrokeB}"/>
+            <Setter Property="Height" Value="1"/>
+        </Style>
+
+        <!-- GroupBox -->
+        <Style TargetType="GroupBox">
+            <Setter Property="Foreground" Value="{StaticResource Text0B}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource StrokeB}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#141A27"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GroupBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0"
+                                           Text="{TemplateBinding Header}"
+                                           FontWeight="SemiBold"
+                                           FontSize="13"
+                                           Margin="2,0,0,10"/>
+
+                                <ContentPresenter Grid.Row="1"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
 
     <Grid Margin="12">
         <Grid.RowDefinitions>
@@ -14,13 +314,16 @@
         </Grid.RowDefinitions>
 
         <!-- TOP BAR -->
-        <Border Grid.Row="0" CornerRadius="10" Padding="10" Background="#1A1A1A" Margin="0,0,0,10">
+        <Border Grid.Row="0"
+                Style="{StaticResource CardStyle}"
+                Margin="0,0,0,10">
             <DockPanel LastChildFill="False">
 
                 <!-- Left: CSV -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <TextBlock Text="CSV:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="CsvCombo" Width="170" SelectedIndex="0">
+                    <TextBlock Text="CSV:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="CsvCombo" Width="170" SelectedIndex="0"
+                              Style="{StaticResource DarkComboBox}">
                         <ComboBoxItem Content="small.csv"/>
                         <ComboBoxItem Content="medium.csv"/>
                     </ComboBox>
@@ -29,8 +332,9 @@
 
                 <!-- Right: Algo -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <TextBlock Text="Algoritma:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="AlgoCombo" Width="170" SelectedIndex="0">
+                    <TextBlock Text="Algoritma:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="AlgoCombo" Width="170" SelectedIndex="0"
+                              Style="{StaticResource DarkComboBox}">
                         <ComboBoxItem Content="Dijkstra"/>
                         <ComboBoxItem Content="A*"/>
                         <ComboBoxItem Content="BFS"/>
@@ -40,7 +344,12 @@
                         <ComboBoxItem Content="Welsh-Powell"/>
                     </ComboBox>
 
-                    <Button x:Name="BtnRun" Content="Çalıştır" Width="110" Margin="10,0,0,0" Click="BtnRun_Click"/>
+                    <Button x:Name="BtnRun"
+                            Content="Çalıştır"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="110"
+                            Margin="10,0,0,0"
+                            Click="BtnRun_Click"/>
                 </StackPanel>
 
             </DockPanel>
@@ -54,10 +363,9 @@
             </Grid.ColumnDefinitions>
 
             <!-- Canvas area -->
-            <Border Grid.Column="0" CornerRadius="10" Padding="10" Background="#1A1A1A">
+            <Border Grid.Column="0"
+                    Style="{StaticResource CardStyle}">
                 <Grid>
-
-                    <!-- ✅ Zoom + Pan -->
                     <ScrollViewer x:Name="GraphScroll"
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto"
@@ -67,43 +375,40 @@
                                   PreviewMouseMove="GraphScroll_PreviewMouseMove">
 
                         <Canvas x:Name="GraphCanvas"
-                                Background="#0F0F0F"
+                                Background="#0B0F16"
                                 MinWidth="900" MinHeight="600"
                                 Loaded="GraphCanvas_Loaded"
                                 SizeChanged="GraphCanvas_SizeChanged">
-
                             <Canvas.RenderTransform>
                                 <TransformGroup>
                                     <ScaleTransform x:Name="ZoomScale" ScaleX="1" ScaleY="1"/>
                                 </TransformGroup>
                             </Canvas.RenderTransform>
-
                         </Canvas>
-                    </ScrollViewer>
 
-                    <TextBlock Text="Canvas: Grafik burada çizilecek"
-                               Foreground="#777" Margin="8"
-                               IsHitTestVisible="False"/>
+                    </ScrollViewer>
                 </Grid>
             </Border>
 
             <!-- Right panel -->
-            <Border Grid.Column="1" CornerRadius="10" Padding="12" Background="#1A1A1A" Margin="10,0,0,0">
+            <Border Grid.Column="1"
+                    Style="{StaticResource CardStyle}"
+                    Margin="10,0,0,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
 
-                        <TextBlock Text="Kontroller" Foreground="White" FontSize="16" FontWeight="Bold" Margin="0,0,0,12"/>
+                        <TextBlock Text="Kontroller" Style="{StaticResource SectionTitle}"/>
 
                         <!-- Seçim -->
-                        <GroupBox Header="Seçim" Foreground="White" Margin="0,0,0,10">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="Başlangıç Node ID" Foreground="White"/>
+                        <GroupBox Header="Seçim">
+                            <StackPanel>
+                                <TextBlock Text="Başlangıç Node ID"/>
                                 <TextBox x:Name="TxtStart"
                                          Margin="0,6,0,10"
                                          IsReadOnly="False"
                                          LostFocus="TxtStart_LostFocus"/>
 
-                                <TextBlock Text="Hedef Node ID" Foreground="White"/>
+                                <TextBlock Text="Hedef Node ID"/>
                                 <TextBox x:Name="TxtEnd"
                                          Margin="0,6,0,0"
                                          IsReadOnly="False"
@@ -112,25 +417,28 @@
                         </GroupBox>
 
                         <!-- Node Detay -->
-                        <GroupBox Header="Node Özellikleri" Foreground="White" Margin="0,0,0,10">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="Seçili Node:" Foreground="White"/>
-                                <TextBlock x:Name="TxtNodeInfoId" Text="-" Foreground="White" FontWeight="Bold" Margin="0,2,0,8"/>
+                        <GroupBox Header="Node Özellikleri">
+                            <StackPanel>
+                                <TextBlock Text="Seçili Node:"/>
+                                <TextBlock x:Name="TxtNodeInfoId" Text="-" FontWeight="SemiBold" Margin="0,2,0,10"/>
 
-                                <TextBlock Text="Degree:" Foreground="White"/>
-                                <TextBlock x:Name="TxtNodeInfoDegree" Text="-" Foreground="White" Margin="0,2,0,8"/>
+                                <TextBlock Text="Degree:"/>
+                                <TextBlock x:Name="TxtNodeInfoDegree" Text="-" Margin="0,2,0,10"/>
 
-                                <TextBlock Text="Komşular:" Foreground="White"/>
+                                <TextBlock Text="Komşular:"/>
                                 <TextBox x:Name="TxtNodeInfoNeighbors"
-                                         Text="-" Height="70" TextWrapping="Wrap"
-                                         IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
+                                         Text="-"
+                                         Height="70"
+                                         TextWrapping="Wrap"
+                                         IsReadOnly="True"
+                                         VerticalScrollBarVisibility="Auto"/>
                             </StackPanel>
                         </GroupBox>
 
                         <!-- Node Yönetimi -->
-                        <GroupBox Header="Node Yönetimi" Foreground="White" Margin="0,0,0,10">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="Node ID" Foreground="White"/>
+                        <GroupBox Header="Node Yönetimi">
+                            <StackPanel>
+                                <TextBlock Text="Node ID"/>
                                 <TextBox x:Name="TxtEditNodeId" Margin="0,6,0,10" />
 
                                 <StackPanel Orientation="Horizontal">
@@ -140,20 +448,20 @@
                                             Margin="10,0,0,0" Click="BtnRemoveNode_Click"/>
                                 </StackPanel>
 
-                                <TextBlock Text="Not: Aynı ID tekrar eklenemez." Foreground="#888" Margin="0,8,0,0"/>
+                                <TextBlock Text="Not: Aynı ID tekrar eklenemez." Style="{StaticResource MutedText}" Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
 
                         <!-- Edge Yönetimi -->
-                        <GroupBox Header="Edge Yönetimi" Foreground="White" Margin="0,0,0,10">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="From ID" Foreground="White"/>
+                        <GroupBox Header="Edge Yönetimi">
+                            <StackPanel>
+                                <TextBlock Text="From ID"/>
                                 <TextBox x:Name="TxtEdgeFrom" Margin="0,6,0,8"/>
 
-                                <TextBlock Text="To ID" Foreground="White"/>
+                                <TextBlock Text="To ID"/>
                                 <TextBox x:Name="TxtEdgeTo" Margin="0,6,0,8"/>
 
-                                <TextBlock Text="Weight (opsiyonel)" Foreground="White"/>
+                                <TextBlock Text="Weight (opsiyonel)"/>
                                 <TextBox x:Name="TxtEdgeWeight" Margin="0,6,0,10" Text="1"/>
 
                                 <StackPanel Orientation="Horizontal">
@@ -163,44 +471,43 @@
                                             Margin="10,0,0,0" Click="BtnRemoveEdge_Click"/>
                                 </StackPanel>
 
-                                <TextBlock Text="Not: Self-loop yok. Aynı edge tekrar eklenemez." Foreground="#888" Margin="0,8,0,0"/>
+                                <TextBlock Text="Not: Self-loop yok. Aynı edge tekrar eklenemez." Style="{StaticResource MutedText}" Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
 
                         <!-- Güncelleme -->
-                        <GroupBox Header="Güncelleme" Foreground="White" Margin="0,0,0,10">
-                            <StackPanel Margin="10">
+                        <GroupBox Header="Güncelleme">
+                            <StackPanel>
 
-                                <TextBlock Text="Node ID Güncelle (Rename)" Foreground="White" FontWeight="Bold" Margin="0,0,0,6"/>
-                                <TextBlock Text="Eski Node ID" Foreground="White"/>
+                                <TextBlock Text="Node ID Güncelle (Rename)" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <TextBlock Text="Eski Node ID"/>
                                 <TextBox x:Name="TxtUpdateOldNodeId" Margin="0,6,0,8"/>
-                                <TextBlock Text="Yeni Node ID" Foreground="White"/>
+                                <TextBlock Text="Yeni Node ID"/>
                                 <TextBox x:Name="TxtUpdateNewNodeId" Margin="0,6,0,10"/>
                                 <Button x:Name="BtnUpdateNode" Content="Node Güncelle" Height="32"
                                         Click="BtnUpdateNode_Click"/>
 
-                                <Separator Margin="0,12,0,12"/>
+                                <Separator/>
 
-                                <TextBlock Text="Edge Weight Güncelle" Foreground="White" FontWeight="Bold" Margin="0,0,0,6"/>
-                                <TextBlock Text="From ID" Foreground="White"/>
+                                <TextBlock Text="Edge Weight Güncelle" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <TextBlock Text="From ID"/>
                                 <TextBox x:Name="TxtUpdateEdgeFrom" Margin="0,6,0,8"/>
-                                <TextBlock Text="To ID" Foreground="White"/>
+                                <TextBlock Text="To ID"/>
                                 <TextBox x:Name="TxtUpdateEdgeTo" Margin="0,6,0,8"/>
-                                <TextBlock Text="Yeni Weight" Foreground="White"/>
+                                <TextBlock Text="Yeni Weight"/>
                                 <TextBox x:Name="TxtUpdateEdgeWeight" Margin="0,6,0,10" Text="1"/>
                                 <Button x:Name="BtnUpdateEdge" Content="Edge Güncelle" Height="32"
                                         Click="BtnUpdateEdge_Click"/>
 
-                                <TextBlock Text="Not: Edge güncelleme sadece weight değiştirir." Foreground="#888" Margin="0,8,0,0"/>
+                                <TextBlock Text="Not: Edge güncelleme sadece weight değiştirir." Style="{StaticResource MutedText}" Margin="0,10,0,0"/>
                             </StackPanel>
                         </GroupBox>
 
                         <!-- Görünüm -->
-                        <GroupBox Header="Görünüm" Foreground="White" Margin="0,0,0,10">
-                            <StackPanel Margin="10">
+                        <GroupBox Header="Görünüm">
+                            <StackPanel>
                                 <CheckBox x:Name="ChkShowIds"
                                           Content="Node ID göster"
-                                          Foreground="White"
                                           IsChecked="True"
                                           Margin="0,0,0,6"
                                           Checked="UiOptionChanged"
@@ -208,7 +515,6 @@
 
                                 <CheckBox x:Name="ChkShowWeights"
                                           Content="Ağırlıkları göster"
-                                          Foreground="White"
                                           IsChecked="True"
                                           Margin="0,0,0,0"
                                           Checked="UiOptionChanged"
@@ -216,7 +522,10 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <Button x:Name="BtnClear" Content="Temizle" Height="34" Click="BtnClear_Click"/>
+                        <Button x:Name="BtnClear"
+                                Content="Temizle"
+                                Height="34"
+                                Click="BtnClear_Click"/>
 
                     </StackPanel>
                 </ScrollViewer>
@@ -224,18 +533,35 @@
         </Grid>
 
         <!-- LOG -->
-        <Border Grid.Row="2" CornerRadius="10" Padding="10" Background="#1A1A1A" Margin="0,10,0,0">
+        <Border Grid.Row="2"
+                Style="{StaticResource CardStyle}"
+                Margin="0,10,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock Text="Log / Çıktı" Foreground="White" FontWeight="Bold"/>
-                <TextBox x:Name="TxtLog" Grid.Row="1" Margin="0,8,0,0"
+
+                <TextBlock Text="Log / Çıktı" FontWeight="SemiBold"/>
+
+                <TextBox x:Name="TxtLog"
+                         Grid.Row="1"
+                         Margin="0,10,0,0"
                          VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled"
                          TextWrapping="Wrap"
-                         IsReadOnly="True"/>
+                         AcceptsReturn="True"
+                         IsReadOnly="True"
+                         Height="Auto"
+                         MinHeight="120"
+                         VerticalContentAlignment="Top"
+                         Background="#0E1320"
+                         Foreground="{StaticResource Text0B}"
+                         BorderBrush="{StaticResource StrokeB}"
+                         BorderThickness="1"
+                         Padding="10"/>
             </Grid>
         </Border>
+
     </Grid>
 </Window>

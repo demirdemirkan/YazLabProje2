@@ -97,7 +97,10 @@ namespace projedeneme
                 nodeColoring = null;
                 DrawGraphFromGraph(_graph);
 
-                Log($"Yüklendi. Node={_graph.Nodes.Count}, Edge={_graph.Edges.Count}");
+                LogClear();
+                Log($"Yüklendi: {csvFile}");
+
+
                 ClearNodeDetails();
             }
             catch
@@ -163,7 +166,8 @@ namespace projedeneme
                 if (algo == "BFS")
                 {
                     var order = Bfs.Run(_graph, startId);
-                    Log($"BFS: {string.Join("->", order)}");
+                    Log($"Sonuç: BFS | Ziyaret: {order.Count}");
+
                     HighlightPath(order.ToArray());
                     return;
                 }
@@ -171,7 +175,8 @@ namespace projedeneme
                 if (algo == "DFS")
                 {
                     var order = Dfs.Run(_graph, startId);
-                    Log($"DFS: {string.Join("->", order)}");
+                    Log($"Sonuç: DFS | Ziyaret: {order.Count}");
+
                     HighlightPath(order.ToArray());
                     return;
                 }
@@ -179,8 +184,8 @@ namespace projedeneme
                 if (algo == "Dijkstra")
                 {
                     var (path, cost) = Dijkstra.Run(_graph, startId, endId);
-                    Log($"Dijkstra: {string.Join("->", path)}");
-                    Log($"Maliyet: {cost:0.####}");
+                    Log($"Sonuç: Dijkstra | Yol uzunluğu: {path.Count} | Maliyet: {cost:0.####}");
+
                     HighlightPath(path.ToArray());
                     return;
                 }
@@ -201,7 +206,8 @@ namespace projedeneme
                     var path = AStar.FindPath(_graph, startId, endId, Heuristic);
                     if (path == null || path.Count == 0)
                     {
-                        Log("A*: Yol bulunamadı.");
+                        Log($"Sonuç: A* | Yol uzunluğu: {path.Count}");
+
                         HighlightPath(Array.Empty<int>());
                         return;
                     }
@@ -429,7 +435,8 @@ namespace projedeneme
                     var t = new TextBlock
                     {
                         Text = e.Weight.ToString("0.##", CultureInfo.InvariantCulture),
-                        Foreground = Brushes.White,
+                        Foreground = Brushes.LightGray,
+                        Opacity = 0.85, 
                         FontSize = 12,
                         IsHitTestVisible = false
                     };
@@ -1066,7 +1073,8 @@ namespace projedeneme
 
             _loadedRows = newRows;
 
-            Log("Kaydedildi: " + _loadedCsvPath);
+            Log("Kaydedildi.");
+
         }
         // =========================
         // ✅ Zoom + Pan Handlers
@@ -1145,8 +1153,24 @@ namespace projedeneme
 
         private void Log(string msg)
         {
-            TxtLog.AppendText(msg + "\n");
+            if (TxtLog == null) return;
+
+            // Gereksiz boşlukları temizle
+            msg = (msg ?? "").Trim();
+            if (msg.Length == 0) return;
+
+            // Log çok uzamasın (örnek: BFS/DFS path gibi)
+            if (msg.Length > 220) msg = msg.Substring(0, 220) + "...";
+
+            TxtLog.AppendText(msg + Environment.NewLine);
             TxtLog.ScrollToEnd();
         }
+
+        private void LogClear()
+        {
+            if (TxtLog == null) return;
+            TxtLog.Clear();
+        }
+
     }
 }
